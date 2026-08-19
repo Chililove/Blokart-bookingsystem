@@ -73,6 +73,13 @@ async function run() {
   r = await req('POST', '/api/bookings', { body: order({ email: 'not-an-email' }) });
   check('validering: dårlig e-mail afvist', r.status === 409 && !r.json.ok);
 
+  // 3b. Phone with letters/junk is rejected (not just "has 8 digits").
+  r = await req('POST', '/api/bookings', { body: order({ phone: '27827813r3qr' }) });
+  check('validering: tlf med bogstaver afvist', r.status === 409 && !r.json.ok);
+  // A normal formatted number still works.
+  r = await req('POST', '/api/bookings', { body: order({ phone: '+45 27 82 78 13', date: '2099-06-25' }) });
+  check('validering: pænt formateret tlf accepteret', r.status === 201 && r.json.ok);
+
   // 4. Over-capacity single order is refused (10 singles exist; ask for 11).
   r = await req('POST', '/api/bookings', { body: order({ singleQty: 11, date: '2099-06-16' }) });
   check('kapacitet: for mange vogne afvist', r.status === 409 && r.json.full === true);

@@ -60,12 +60,14 @@ function isStaff(req) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-// Phone required so staff can call to cancel in bad weather. Lenient on
-// formatting, strict on 8+ digits.
+// Phone required so staff can call/text to cancel in bad weather. Lenient on
+// formatting (+, spaces, dashes, parentheses ok) but reject anything else -
+// letters/junk mean a typo or fake number we can't reach. 8-15 digits (E.164).
 function validPhone(phone) {
   if (!phone || typeof phone !== 'string') return false;
-  const digits = phone.replace(/[^0-9]/g, '');
-  return digits.length >= 8;
+  if (!/^\+?[\d\s()\-]+$/.test(phone.trim())) return false;
+  const digits = phone.replace(/\D/g, '');
+  return digits.length >= 8 && digits.length <= 15;
 }
 
 // Local (not UTC) date string, so a booking's day matches the shop's clock.
