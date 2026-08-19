@@ -25,6 +25,12 @@
     .stepbtn:disabled { opacity:.35; cursor:not-allowed; }
     .qnum { min-width:26px; text-align:center; font-size:1.2rem; font-weight:700; }
     .total-line { margin-top:14px; font-weight:700; color:var(--coral-dark); font-size:1.1rem; }
+    .qty-info { display:flex; align-items:center; gap:14px; }
+    .qty-icon { display:inline-flex; align-items:center; justify-content:center;
+      width:46px; height:46px; border-radius:12px; background:#e9f4f6; color:var(--sea); flex:0 0 auto; }
+    .qty-icon svg { width:26px; height:26px; }
+    .hero-art { position:absolute; left:28px; bottom:20px; width:138px; height:auto; opacity:.95; pointer-events:none; z-index:1; }
+    @media (max-width:620px){ .hero-art { display:none; } }
   </style>
 </head>
 <body>
@@ -42,6 +48,16 @@
   <section class="hero">
     <h1 data-t="heroH1">Book din blokart på stranden</h1>
     <p data-t="heroP">Oplev fart og spænding på Fanøs strand. Vælg antal, dato og tid.</p>
+    <svg class="hero-art" viewBox="0 0 176 208" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <path d="M58 150 L62 14 C96 44 120 112 112 150 Z" fill="rgba(255,255,255,.22)"/>
+      <rect x="56" y="12" width="4.5" height="140" rx="2" fill="rgba(255,255,255,.34)"/>
+      <path d="M30 158 C55 154 101 154 126 158 L120 169 C100 177 56 177 36 169 Z" fill="rgba(255,255,255,.26)"/>
+      <circle cx="66" cy="149" r="7" fill="rgba(255,255,255,.32)"/>
+      <path d="M64 152 L98 163 L106 153 L116 163 L70 166 Z" fill="rgba(255,255,255,.24)"/>
+      <path d="M122 164 L152 172 L151 176 L121 168 Z" fill="rgba(255,255,255,.3)"/>
+      <circle cx="46" cy="180" r="14" fill="none" stroke="rgba(255,255,255,.36)" stroke-width="4"/>
+      <circle cx="157" cy="176" r="9" fill="none" stroke="rgba(255,255,255,.36)" stroke-width="3.5"/>
+    </svg>
   </section>
 
   <div class="wrap">
@@ -52,9 +68,14 @@
       <div class="hint" data-t="qtyHint">Vælg hvor mange vogne I vil booke. Skal I holde et event, kan I booke flere på én gang.</div>
 
       <div class="qty-card">
-        <div>
-          <h3 data-t="singleTitle">Single blokart</h3>
-          <div class="desc"><span class="price" id="priceSingle">-</span> · <span data-t="singleDesc">Til én person.</span></div>
+        <div class="qty-info">
+          <span class="qty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c0-3.6 2.9-5.8 6.5-5.8s6.5 2.2 6.5 5.8"/></svg>
+          </span>
+          <div>
+            <h3 data-t="singleTitle">Single blokart</h3>
+            <div class="desc"><span class="price" id="priceSingle">-</span> · <span data-t="singleDesc">Til én person.</span></div>
+          </div>
         </div>
         <div class="stepper">
           <button type="button" class="stepbtn" data-q="single" data-d="-1">−</button>
@@ -64,9 +85,14 @@
       </div>
 
       <div class="qty-card">
-        <div>
-          <h3 data-t="doubleTitle">Dobbeltsæde blokart</h3>
-          <div class="desc"><span class="price" id="priceDouble">-</span> · <span data-t="doubleDesc">Til to personer.</span></div>
+        <div class="qty-info">
+          <span class="qty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="2.8"/><circle cx="16.5" cy="9" r="2.3"/><path d="M3 19c0-3.1 2.5-5 6-5 1 0 1.9.2 2.7.5"/><path d="M11.5 19c.4-2.7 2.6-4.3 5.2-4.3 2.8 0 4.8 1.8 4.8 4.3"/></svg>
+          </span>
+          <div>
+            <h3 data-t="doubleTitle">Dobbeltsæde blokart</h3>
+            <div class="desc"><span class="price" id="priceDouble">-</span> · <span data-t="doubleDesc">Til to personer.</span></div>
+          </div>
         </div>
         <div class="stepper">
           <button type="button" class="stepbtn" data-q="double" data-d="-1">−</button>
