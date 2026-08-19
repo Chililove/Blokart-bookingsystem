@@ -7,7 +7,7 @@
     "start": "node server.js",
     "demo": "node seed-demo.js && node server.js",
     "reminders": "node reminders.js",
-    "test": "node test-availability.js"
+    "test": "node test-availability.js && node test-integration.js"
   },
   "engines": {
     "node": ">=18"
