@@ -132,6 +132,21 @@ async function run() {
   r = await req('POST', '/api/bookings', { body: order({ singleQty: 1, date: D4 }) });
   check('aflysning: frigiver vogn (ny booking lykkes)', r.status === 201 && r.json.ok);
 
+  // 10. Staff can create a booking via the quantity path.
+  const SD = '2099-07-10';
+  r = await req('POST', '/api/staff/bookings', { staff: STAFF, body: order({ singleQty: 1, doubleQty: 0, date: SD }) });
+  check('staff: opret enkelt booking (201)', r.status === 201 && r.json.ok);
+
+  // 11. Staff is blocked on a closed day and must reopen it first.
+  const SC = '2099-07-11';
+  await req('POST', '/api/closures', { staff: STAFF, body: { date: SC, reason: 'storm' } });
+  r = await req('POST', '/api/staff/bookings', { staff: STAFF, body: order({ singleQty: 1, date: SC }) });
+  check('staff: blokeret på lukket dag (409 closed)', r.status === 409 && r.json.closed === true);
+
+  // 13. Staff group order still enforces fleet capacity.
+  r = await req('POST', '/api/staff/bookings', { staff: STAFF, body: order({ singleQty: 11, date: '2099-07-12' }) });
+  check('staff: kapacitet håndhæves (409)', r.status === 409 && r.json.full === true);
+
   console.log(`\n${fail === 0 ? '✅ ALLE TEST BESTÅET' : '❌ NOGLE TEST FEJLEDE'} (${pass} ok, ${fail} fejl)`);
   return fail === 0;
 }

@@ -8,7 +8,7 @@ const crypto = require('crypto');
 
 const config = require('./config');
 const store = require('./lib/store');
-const { calcAvailability, canBook, canBookQuantities } = require('./lib/availability');
+const { calcAvailability, canBookQuantities } = require('./lib/availability');
 const flatpay = require('./lib/flatpay');
 const calendar = require('./lib/googleCalendar');
 const notify = require('./lib/notify');
@@ -211,95 +211,6 @@ function contactError(input, E) {
   return null;
 }
 
-// Shared by online customers and staff so validation/capacity rules can't
-// diverge between the two entry points.
-async function createBooking(input, { isStaffBooking }) {
-  const { type, date, startTime, durationMinutes, name, phone, email, payment, note } = input;
-  const lang = ['da', 'de', 'en'].includes(input.lang) ? input.lang : 'da';
-  const E = errors(lang);
-
-  // --- Validation -----------------------------------------------------------
-  if (!['single', 'double'].includes(type)) return { ok: false, error: E.invalidType };
-  if (!name || !name.trim()) return { ok: false, error: E.nameMissing };
-  if (!validPhone(phone)) return { ok: false, error: E.phoneRequired };
-  const contactErr = contactError(input, E);
-  if (contactErr) return { ok: false, error: contactErr };
-  // GDPR: only online customers must consent; staff book on their behalf.
-  if (!isStaffBooking && !input.consent) return { ok: false, error: E.consent };
-
-  const dur = Number(durationMinutes);
-  if (!config.booking.durationsMinutes.includes(dur)) return { ok: false, error: E.invalidDuration };
-
-  const start = new Date(`${date}T${startTime}:00`).getTime();
-  if (isNaN(start)) return { ok: false, error: E.invalidDateTime };
-  const end = start + dur * 60000;
-
-  // 60s grace so a click at the top of the slot isn't rejected as "past".
-  if (start < Date.now() - 60000) return { ok: false, error: E.past };
-
-  // Whole booking must fit inside opening hours, not just its start.
-  const startH = new Date(start).getHours() + new Date(start).getMinutes() / 60;
-  const endH = new Date(end).getHours() + new Date(end).getMinutes() / 60;
-  if (startH < config.booking.openHour || endH > config.booking.closeHour) {
-    return { ok: false, error: E.hours };
-  }
-
-  // --- Closed day ---
-  // Weather closure blocks everyone, staff included; booking onto a cancelled
-  // day is almost always a mistake. Staff must reopen the day first.
-  const closure = store.getClosureForDate(date);
-  if (closure) {
-    return {
-      ok: false,
-      closed: true,
-      error: isStaffBooking
-        ? `Dagen ${date} er lukket (${closure.reason}). Åbn dagen igen først, hvis I vil oprette en booking.`
-        : E.closed(date, closure.reason),
-    };
-  }
-
-  // --- Capacity: the one check that actually prevents overbooking ---
-  const existing = await bookingsInWindow(start, end);
-  if (!canBook(existing, type, start, end, config.fleet)) {
-    return { ok: false, error: E.full(type), full: true };
-  }
-
-  // --- Persist ---
-  const booking = store.addBooking({
-    type,
-    start,
-    end,
-    durationMinutes: dur,
-    name: name.trim(),
-    phone: phone.trim(),
-    email: (email || '').trim(),
-    note: (note || '').trim(),
-    lang,
-    // GDPR: record online consent as evidence; null when staff booked it.
-    consentAccepted: isStaffBooking ? null : !!input.consent,
-    payment: payment === 'shop' ? 'shop' : 'flatpay',
-    source: isStaffBooking ? 'staff' : 'online',
-    // Staff and pay-in-shop are certain; online Flatpay isn't paid yet.
-    status: isStaffBooking || payment === 'shop' ? 'confirmed' : 'pending_payment',
-  });
-
-  // Confirmed bookings hit the calendar and notify now. Unpaid Flatpay waits
-  // for the webhook, so we never confirm an unpaid booking.
-  if (booking.status === 'confirmed') {
-    // Booking is already saved; a calendar/SMS hiccup must not fail the request
-    // or the customer would rebook and we'd double-count the cart.
-    try {
-      const ev = await calendar.pushToCalendar(booking);
-      store.setBookingFields(booking.id, { calendarEventId: ev.eventId });
-      booking.calendarEventId = ev.eventId;
-    } catch (e) { console.error('Kalender-push fejlede (booking gemt):', e.message); }
-    try { await notify.notifyCustomer('confirmation', booking); }
-    catch (e) { console.error('Notifikation fejlede (booking gemt):', e.message); }
-  }
-
-  return { ok: true, booking };
-}
-
 // Group order: several carts, one slot, one purchase. Stored as N bookings
 // sharing an orderId so they confirm/cancel together.
 async function createOrder(input, { isStaffBooking = false } = {}) {
@@ -333,9 +244,17 @@ async function createOrder(input, { isStaffBooking = false } = {}) {
     return { ok: false, error: E.hours };
   }
 
-  // Closures block online customers; staff may override (e.g. a phoned-in group).
+  // Closures block everyone, staff included: booking onto a cancelled day is
+  // almost always a mistake, so staff must reopen the day first.
   const closure = store.getClosureForDate(date);
-  if (closure && !isStaffBooking) return { ok: false, closed: true, error: E.closed(date, closure.reason) };
+  if (closure) {
+    return {
+      ok: false, closed: true,
+      error: isStaffBooking
+        ? `Dagen ${date} er lukket (${closure.reason}). Åbn dagen igen først, hvis I vil oprette en booking.`
+        : E.closed(date, closure.reason),
+    };
+  }
 
   // --- Capacity for the whole order ---
   // Enforced even for staff: no override can conjure more physical carts.
@@ -535,15 +454,11 @@ const server = http.createServer(async (req, res) => {
     }
 
     // --- Staff: create booking(s) themselves ---
-    // Quantities -> group order; otherwise legacy single booking, kept for
-    // backward compatibility with older staff clients.
+    // One code path: staff bookings run through createOrder like online orders.
     if (p === '/api/staff/bookings' && req.method === 'POST') {
       const { body, tooLarge } = await readBody(req);
       if (tooLarge) return sendJson(res, 413, { error: 'Forespørgslen er for stor.' });
-      const hasQty = body.singleQty !== undefined || body.doubleQty !== undefined;
-      const result = hasQty
-        ? await runExclusive(() => createOrder(body, { isStaffBooking: true }))
-        : await runExclusive(() => createBooking(body, { isStaffBooking: true }));
+      const result = await runExclusive(() => createOrder(body, { isStaffBooking: true }));
       return sendJson(res, result.ok ? 201 : 409, result);
     }
 
