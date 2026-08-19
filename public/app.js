@@ -24,7 +24,14 @@ function applyLang() {
 document.querySelectorAll('.langbar button').forEach(b => b.addEventListener('click', () => { state.lang = b.dataset.lang; applyLang(); }));
 
 async function loadConfig() {
-  state.cfg = await (await fetch('/api/config')).json();
+  const cm = document.getElementById('connMsg');
+  if (cm) cm.innerHTML = `<div class="notice">${tr().connecting}</div>`;
+  // Render's free tier sleeps, so the first request can be slow - throw on a
+  // bad response so boot() can show a retry instead of a half-dead page.
+  const res = await fetch('/api/config');
+  if (!res.ok) throw new Error('config ' + res.status);
+  state.cfg = await res.json();
+  if (cm) cm.innerHTML = '';
   document.getElementById('priceSingle').textContent = state.cfg.prices.single + ' kr.';
   document.getElementById('priceDouble').textContent = state.cfg.prices.double + ' kr.';
   state.duration = state.cfg.durationsMinutes[0];
@@ -113,10 +120,30 @@ function fits(sBooked, dBooked, addS, addD) {
   return true;
 }
 
-document.querySelectorAll('[data-pay]').forEach(el => el.addEventListener('click', () => {
-  document.querySelectorAll('[data-pay]').forEach(x => x.classList.remove('selected'));
-  el.classList.add('selected'); state.pay = el.dataset.pay; update();
-}));
+// Payment is an ARIA radiogroup: selecting updates aria-checked and moves the
+// single tab stop (roving tabindex), and arrow keys move between options - so
+// it works with keyboard and screen readers, not just mouse clicks.
+const payEls = Array.from(document.querySelectorAll('[data-pay]'));
+function selectPay(el) {
+  payEls.forEach(x => {
+    const on = x === el;
+    x.classList.toggle('selected', on);
+    x.setAttribute('aria-checked', on ? 'true' : 'false');
+    x.tabIndex = on ? 0 : -1;
+  });
+  state.pay = el.dataset.pay; update();
+}
+payEls.forEach((el, i) => {
+  el.addEventListener('click', () => { selectPay(el); el.focus(); });
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPay(el); }
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault(); const n = payEls[(i + 1) % payEls.length]; selectPay(n); n.focus();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault(); const n = payEls[(i - 1 + payEls.length) % payEls.length]; selectPay(n); n.focus();
+    }
+  });
+});
 document.getElementById('date').addEventListener('change', e => { state.date = e.target.value; state.time=null; loadSlots(); update(); });
 document.getElementById('duration').addEventListener('change', e => { state.duration = Number(e.target.value); state.time=null; loadSlots(); update(); });
 ['name','phone','email'].forEach(id => document.getElementById(id).addEventListener('input', update));
@@ -141,10 +168,22 @@ async function loadSlots() {
     const div = document.createElement('div');
     div.className = 'slot' + (ok ? '' : ' full');
     div.innerHTML = `${s.time}<small>S ${s.singleAvailable} · D ${s.doubleAvailable}</small>`;
-    if (ok) div.addEventListener('click', () => {
-      document.querySelectorAll('.slot').forEach(x => x.classList.remove('selected'));
-      div.classList.add('selected'); state.time = s.time; update();
-    });
+    if (ok) {
+      // Expose each open slot as a real, focusable button for keyboard/SR users.
+      div.setAttribute('role', 'button');
+      div.tabIndex = 0;
+      div.setAttribute('aria-pressed', 'false');
+      div.setAttribute('aria-label', tr().slotAria(s.time, s.singleAvailable, s.doubleAvailable));
+      const choose = () => {
+        document.querySelectorAll('.slot').forEach(x => { x.classList.remove('selected'); x.setAttribute('aria-pressed', 'false'); });
+        div.classList.add('selected'); div.setAttribute('aria-pressed', 'true');
+        state.time = s.time; update();
+      };
+      div.addEventListener('click', choose);
+      div.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(); } });
+    } else {
+      div.setAttribute('aria-disabled', 'true');
+    }
     box.appendChild(div);
   });
   // drop selection if chosen slot no longer fits
@@ -210,4 +249,15 @@ document.getElementById('bookBtn').addEventListener('click', async () => {
   const b = (navigator.language || 'da').slice(0,2).toLowerCase();
   state.lang = ['da','de','en'].includes(b) ? b : 'da';
 })();
-loadConfig().then(applyLang);
+// applyLang() first so the static text is localized even while config loads;
+// on failure show a retry button instead of leaving the page half-working.
+function boot() {
+  applyLang();
+  loadConfig().then(applyLang).catch(() => {
+    const cm = document.getElementById('connMsg');
+    if (!cm) return;
+    cm.innerHTML = `<div class="notice bad">${esc(tr().connError)} <button type="button" id="retryBtn" class="btn btn-secondary" style="margin-left:8px;padding:6px 14px;">${esc(tr().retry)}</button></div>`;
+    document.getElementById('retryBtn').addEventListener('click', boot);
+  });
+}
+boot();

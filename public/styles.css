@@ -144,6 +144,12 @@ input:focus, select:focus, textarea:focus {
 .slot.full { opacity: .4; cursor: not-allowed; text-decoration: line-through; }
 .slot.full:hover { border-color: var(--line); }
 
+/* Visible keyboard focus for the custom (non-native) controls. */
+.slot:focus-visible, .cart-option:focus-visible,
+.langbar button:focus-visible, .stepbtn:focus-visible {
+  outline: 3px solid var(--teal); outline-offset: 2px;
+}
+
 /* --- Buttons --- */
 .btn {
   display: inline-block;

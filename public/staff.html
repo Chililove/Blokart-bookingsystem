@@ -26,7 +26,7 @@
       <h2 data-t="login">Log ind</h2>
       <label for="code" data-t="staffCode">Personale-kode</label>
       <input type="password" id="code" style="max-width:280px;" />
-      <div id="loginMsg"></div>
+      <div id="loginMsg" role="status" aria-live="polite"></div>
       <button class="btn btn-secondary" id="loginBtn" style="margin-top:12px;" data-t="login">Log ind</button>
     </div>
 
@@ -74,7 +74,7 @@
           <div><label data-t="note">Note (valgfri)</label><input id="sNote" /></div>
           <div></div>
         </div>
-        <div id="createMsg"></div>
+        <div id="createMsg" role="status" aria-live="polite"></div>
         <button class="btn" id="createBtn" style="margin-top:14px;" data-t="createBtn">Opret booking</button>
       </div>
     </div>

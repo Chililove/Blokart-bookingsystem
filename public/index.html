@@ -35,6 +35,7 @@
   </section>
 
   <div class="wrap">
+    <div id="connMsg" role="status" aria-live="polite"></div>
     <!-- Step 1: carts + quantity -->
     <div class="card">
       <div class="step-label" data-t="step1">Trin 1</div>
@@ -92,10 +93,10 @@
           <select id="duration"></select>
         </div>
       </div>
-      <div id="closedBanner"></div>
-      <label style="margin-top:16px;" data-t="availableTimes">Ledige tider</label>
+      <div id="closedBanner" role="status" aria-live="polite"></div>
+      <label id="slotsLabel" style="margin-top:16px;" data-t="availableTimes">Ledige tider</label>
       <div class="hint" data-t="availableHint">S = ledige single, D = ledige dobbelt. Tider der ikke kan rumme jeres antal er gråede ud.</div>
-      <div class="slots" id="slots"><span class="hint" data-t="pickDate">Vælg en dato for at se ledige tider…</span></div>
+      <div class="slots" id="slots" role="group" aria-labelledby="slotsLabel" aria-live="polite"><span class="hint" data-t="pickDate">Vælg en dato for at se ledige tider…</span></div>
     </div>
 
     <!-- Step 3: contact + payment -->
@@ -126,20 +127,20 @@
       <label for="email" data-t="emailLabel">E-mail (valgfri)</label>
       <input type="email" id="email" />
 
-      <label style="margin-top:18px;"><span data-t="paymentLabel">Betaling</span> <span class="req">*</span></label>
-      <div class="cart-options">
-        <div class="cart-option selected" data-pay="flatpay">
+      <label style="margin-top:18px;"><span id="payLabel" data-t="paymentLabel">Betaling</span> <span class="req">*</span></label>
+      <div class="cart-options" id="payGroup" role="radiogroup" aria-labelledby="payLabel">
+        <div class="cart-option selected" data-pay="flatpay" role="radio" aria-checked="true" tabindex="0">
           <h3 data-t="payNow">Betal nu</h3>
           <div class="desc" data-t="payNowDesc">Sikker betaling med kort.</div>
         </div>
-        <div class="cart-option" data-pay="shop">
+        <div class="cart-option" data-pay="shop" role="radio" aria-checked="false" tabindex="-1">
           <h3 data-t="payShop">Betal i butikken</h3>
           <div class="desc" data-t="payShopDesc">Reservér nu, betal når I møder op.</div>
         </div>
       </div>
 
       <div id="consentBox" style="margin-top:16px;"></div>
-      <div id="message"></div>
+      <div id="message" role="status" aria-live="polite"></div>
       <button class="btn" id="bookBtn" style="margin-top:14px;" disabled data-t="bookBtn">Gennemfør booking</button>
       <div class="hint" id="summary" style="margin-top:10px;"></div>
     </div>
