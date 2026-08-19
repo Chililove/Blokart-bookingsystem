@@ -22,14 +22,32 @@ function sendJson(res, status, data) {
   res.end(body);
 }
 
+// Resolves { body, raw, tooLarge }. We keep the raw string because webhook
+// signatures are computed over the exact bytes, and we abort oversized uploads
+// so a huge payload can't exhaust memory.
 function readBody(req) {
   return new Promise((resolve) => {
     let data = '';
-    req.on('data', (c) => (data += c));
-    req.on('end', () => {
-      try { resolve(JSON.parse(data || '{}')); }
-      catch { resolve({}); }
+    let received = 0;
+    let tooLarge = false;
+    let done = false;
+    const finish = (payload) => { if (!done) { done = true; resolve(payload); } };
+    req.on('data', (c) => {
+      received += c.length;
+      // Past the cap: stop buffering (bounds memory) but let the request end so
+      // the handler can still reply 413. Only a wildly abusive upload is killed.
+      if (received > config.limits.bodyMaxBytes) tooLarge = true;
+      if (!tooLarge) data += c;
+      if (received > config.limits.bodyMaxBytes * 8) req.destroy();
     });
+    req.on('end', () => {
+      if (tooLarge) return finish({ body: {}, raw: '', tooLarge: true });
+      let body = {};
+      try { body = JSON.parse(data || '{}'); } catch { body = {}; }
+      finish({ body, raw: data, tooLarge: false });
+    });
+    req.on('close', () => finish({ body: {}, raw: '', tooLarge: true }));
+    req.on('error', () => finish({ body: {}, raw: '', tooLarge: true }));
   });
 }
 
@@ -67,6 +85,38 @@ function runExclusive(fn) {
   return result;
 }
 
+// --- Rate limit ---
+// Naive in-memory sliding window per client IP. Enough to blunt scripted spam
+// on this single instance; a multi-instance deploy would need a shared store.
+const rateHits = new Map();
+function clientIp(req) {
+  // Render/most proxies set x-forwarded-for; take the first (original) IP.
+  const xf = req.headers['x-forwarded-for'];
+  return (xf ? String(xf).split(',')[0].trim() : '') || req.socket.remoteAddress || 'unknown';
+}
+function rateLimited(ip) {
+  const now = Date.now();
+  const win = config.limits.rateWindowMs;
+  const arr = (rateHits.get(ip) || []).filter((t) => now - t < win);
+  arr.push(now);
+  rateHits.set(ip, arr);
+  return arr.length > config.limits.rateMaxRequests;
+}
+
+// A Flatpay checkout that's opened but never paid leaves pending_payment rows
+// that keep holding carts. Cancel them past the TTL so the capacity frees up.
+function reapPendingOrders() {
+  const cutoff = Date.now() - config.limits.pendingTtlMinutes * 60000;
+  const stale = store.getBookings().filter((b) => b.status === 'pending_payment' && (b.createdAt || 0) < cutoff);
+  for (const b of stale) store.cancelBooking(b.id);
+  if (stale.length) console.log(`[reaper] Frigav ${stale.length} ubetalt(e) booking(er) efter ${config.limits.pendingTtlMinutes} min.`);
+  // Drop idle rate-limit buckets so the map can't grow without bound.
+  const now = Date.now();
+  for (const [ip, arr] of rateHits) {
+    if (!arr.length || now - arr[arr.length - 1] > config.limits.rateWindowMs) rateHits.delete(ip);
+  }
+}
+
 // Count staff's own Google Calendar entries too, or we'd overbook against
 // carts staff reserved by hand.
 async function bookingsInWindow(startMs, endMs) {
@@ -102,6 +152,8 @@ function errors(lang) {
       full: (ty) => `Desværre - ingen ledige ${cartWord(ty)}-vogne i det tidsrum.`,
       chooseQty: 'Vælg mindst én vogn.',
       notEnough: 'Der er ikke nok ledige vogne i det tidsrum til så mange. Vælg færre vogne eller et andet tidspunkt.',
+      tooLong: 'En af oplysningerne er for lang.',
+      invalidEmail: 'E-mailadressen ser ikke rigtig ud.',
     },
     de: {
       invalidType: 'Ungültiger Wagentyp.', nameMissing: 'Name fehlt.',
@@ -113,6 +165,8 @@ function errors(lang) {
       full: (ty) => `Leider keine freien ${cartWord(ty)}-Wagen in diesem Zeitraum.`,
       chooseQty: 'Wähle mindestens einen Wagen.',
       notEnough: 'Nicht genug freie Wagen in diesem Zeitraum. Wähle weniger Wagen oder eine andere Zeit.',
+      tooLong: 'Eine der Angaben ist zu lang.',
+      invalidEmail: 'Die E-Mail-Adresse sieht nicht korrekt aus.',
     },
     en: {
       invalidType: 'Invalid cart type.', nameMissing: 'Name is missing.',
@@ -124,9 +178,26 @@ function errors(lang) {
       full: (ty) => `Sorry - no ${cartWord(ty)} carts available in that time slot.`,
       chooseQty: 'Choose at least one cart.',
       notEnough: 'Not enough carts available in that time slot for that many. Choose fewer carts or another time.',
+      tooLong: 'One of the details is too long.',
+      invalidEmail: 'That email address does not look right.',
     },
   };
   return t[L];
+}
+
+// Length caps + email format, shared by single and group bookings so the two
+// paths can't diverge. Returns an error string, or null when the fields pass.
+function contactError(input, E) {
+  const L = config.limits;
+  const name = (input.name || '').trim();
+  const phone = (input.phone || '').trim();
+  const email = (input.email || '').trim();
+  const note = (input.note || '').trim();
+  if (name.length > L.nameMax || phone.length > L.phoneMax || note.length > L.noteMax || email.length > L.emailMax) {
+    return E.tooLong;
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return E.invalidEmail;
+  return null;
 }
 
 // Shared by online customers and staff so validation/capacity rules can't
@@ -140,6 +211,8 @@ async function createBooking(input, { isStaffBooking }) {
   if (!['single', 'double'].includes(type)) return { ok: false, error: E.invalidType };
   if (!name || !name.trim()) return { ok: false, error: E.nameMissing };
   if (!validPhone(phone)) return { ok: false, error: E.phoneRequired };
+  const contactErr = contactError(input, E);
+  if (contactErr) return { ok: false, error: contactErr };
   // GDPR: only online customers must consent; staff book on their behalf.
   if (!isStaffBooking && !input.consent) return { ok: false, error: E.consent };
 
@@ -202,10 +275,15 @@ async function createBooking(input, { isStaffBooking }) {
   // Confirmed bookings hit the calendar and notify now. Unpaid Flatpay waits
   // for the webhook, so we never confirm an unpaid booking.
   if (booking.status === 'confirmed') {
-    const ev = await calendar.pushToCalendar(booking);
-    store.setBookingFields(booking.id, { calendarEventId: ev.eventId });
-    booking.calendarEventId = ev.eventId;
-    await notify.notifyCustomer('confirmation', booking);
+    // Booking is already saved; a calendar/SMS hiccup must not fail the request
+    // or the customer would rebook and we'd double-count the cart.
+    try {
+      const ev = await calendar.pushToCalendar(booking);
+      store.setBookingFields(booking.id, { calendarEventId: ev.eventId });
+      booking.calendarEventId = ev.eventId;
+    } catch (e) { console.error('Kalender-push fejlede (booking gemt):', e.message); }
+    try { await notify.notifyCustomer('confirmation', booking); }
+    catch (e) { console.error('Notifikation fejlede (booking gemt):', e.message); }
   }
 
   return { ok: true, booking };
@@ -225,6 +303,8 @@ async function createOrder(input, { isStaffBooking = false } = {}) {
   if (singleQty + doubleQty < 1) return { ok: false, error: E.chooseQty };
   if (!name || !name.trim()) return { ok: false, error: E.nameMissing };
   if (!validPhone(phone)) return { ok: false, error: E.phoneRequired };
+  const contactErr = contactError(input, E);
+  if (contactErr) return { ok: false, error: contactErr };
   // GDPR: consent required from online customers only, not staff.
   if (!isStaffBooking && !input.consent) return { ok: false, error: E.consent };
 
@@ -276,11 +356,16 @@ async function createOrder(input, { isStaffBooking = false } = {}) {
   // Confirmed orders hit the calendar now with one message for the group;
   // Flatpay orders wait for the payment webhook.
   if (common.status === 'confirmed') {
+    // Order rows are saved; side-effects are best-effort so they can't 500 the
+    // request after we've already committed the carts.
     for (const b of bookings) {
-      const ev = await calendar.pushToCalendar(b);
-      store.setBookingFields(b.id, { calendarEventId: ev.eventId });
+      try {
+        const ev = await calendar.pushToCalendar(b);
+        store.setBookingFields(b.id, { calendarEventId: ev.eventId });
+      } catch (e) { console.error('Kalender-push fejlede (ordre gemt):', e.message); }
     }
-    await notify.notifyOrderCustomer('confirmation', order);
+    try { await notify.notifyOrderCustomer('confirmation', order); }
+    catch (e) { console.error('Notifikation fejlede (ordre gemt):', e.message); }
   }
 
   return { ok: true, orderId, bookings, total, order, payment: common.payment };
@@ -334,13 +419,18 @@ const server = http.createServer(async (req, res) => {
 
       const slots = [];
       const { openHour, closeHour, slotStepMinutes } = config.booking;
+      // Fetch the whole day's bookings ONCE, then compute each slot in memory.
+      // calcAvailability filters to each window, so one calendar call replaces
+      // the ~15 we used to make per page load.
+      const dayStart = new Date(`${date}T00:00:00`).getTime();
+      const dayEnd = new Date(`${date}T23:59:59`).getTime();
+      const dayBookings = await bookingsInWindow(dayStart, dayEnd);
       for (let m = openHour * 60; m + dur <= closeHour * 60; m += slotStepMinutes) {
         const hh = String(Math.floor(m / 60)).padStart(2, '0');
         const mm = String(m % 60).padStart(2, '0');
         const start = new Date(`${date}T${hh}:${mm}:00`).getTime();
         const end = start + dur * 60000;
-        const existing = await bookingsInWindow(start, end);
-        const a = calcAvailability(existing, start, end, config.fleet);
+        const a = calcAvailability(dayBookings, start, end, config.fleet);
         slots.push({
           time: `${hh}:${mm}`,
           singleAvailable: a.singleAvailable,
@@ -356,7 +446,9 @@ const server = http.createServer(async (req, res) => {
 
     // --- Create booking/order (online customer) ---
     if (p === '/api/bookings' && req.method === 'POST') {
-      const body = await readBody(req);
+      if (rateLimited(clientIp(req))) return sendJson(res, 429, { error: 'For mange forsøg lige nu. Vent et øjeblik og prøv igen.' });
+      const { body, tooLarge } = await readBody(req);
+      if (tooLarge) return sendJson(res, 413, { error: 'Forespørgslen er for stor.' });
       // Serialize through the mutex so concurrent orders can't overbook.
       const result = await runExclusive(() => createOrder(body));
       if (!result.ok) return sendJson(res, 409, result);
@@ -379,8 +471,14 @@ const server = http.createServer(async (req, res) => {
     // SECURITY: payment confirmed only here, never from the browser, which
     // can't prove money changed hands.
     if (p === '/api/payments/webhook' && req.method === 'POST') {
-      const body = await readBody(req);
-      // Production must gate on flatpay.verifyWebhook(headers, rawBody) first.
+      const { body, raw, tooLarge } = await readBody(req);
+      if (tooLarge) return sendJson(res, 413, { error: 'Payload for stor.' });
+      // Verify the signature over the RAW bytes before trusting a "paid" event.
+      // Mock returns true; production returns false unless the HMAC matches, so
+      // a forged webhook can't confirm a free booking.
+      if (!flatpay.verifyWebhook(req.headers, raw)) {
+        return sendJson(res, 401, { error: 'Ugyldig webhook-signatur.' });
+      }
       const orderId = body.orderId;
       if (!orderId) return sendJson(res, 400, { error: 'Mangler orderId.' });
 
@@ -392,15 +490,19 @@ const server = http.createServer(async (req, res) => {
       if (pending.length) {
         for (const b of pending) {
           store.setBookingFields(b.id, { status: 'confirmed', paidAt: Date.now() });
-          const ev = await calendar.pushToCalendar(b);
-          store.setBookingFields(b.id, { calendarEventId: ev.eventId });
+          try {
+            const ev = await calendar.pushToCalendar(b);
+            store.setBookingFields(b.id, { calendarEventId: ev.eventId });
+          } catch (e) { console.error('Kalender-push fejlede (betaling bekræftet):', e.message); }
         }
         // One confirmation for the whole order, not one per cart.
         const f = bookings[0];
-        await notify.notifyOrderCustomer('confirmation', {
-          name: f.name, phone: f.phone, email: f.email, lang: f.lang,
-          payment: 'flatpay', start: f.start, singleQty: f.singleQty, doubleQty: f.doubleQty,
-        });
+        try {
+          await notify.notifyOrderCustomer('confirmation', {
+            name: f.name, phone: f.phone, email: f.email, lang: f.lang,
+            payment: 'flatpay', start: f.start, singleQty: f.singleQty, doubleQty: f.doubleQty,
+          });
+        } catch (e) { console.error('Notifikation fejlede (betaling bekræftet):', e.message); }
       }
       return sendJson(res, 200, { ok: true });
     }
@@ -426,7 +528,8 @@ const server = http.createServer(async (req, res) => {
     // Quantities -> group order; otherwise legacy single booking, kept for
     // backward compatibility with older staff clients.
     if (p === '/api/staff/bookings' && req.method === 'POST') {
-      const body = await readBody(req);
+      const { body, tooLarge } = await readBody(req);
+      if (tooLarge) return sendJson(res, 413, { error: 'Forespørgslen er for stor.' });
       const hasQty = body.singleQty !== undefined || body.doubleQty !== undefined;
       const result = hasQty
         ? await runExclusive(() => createOrder(body, { isStaffBooking: true }))
@@ -436,7 +539,7 @@ const server = http.createServer(async (req, res) => {
 
     // --- Staff: cancel a booking ---
     if (p === '/api/bookings/cancel' && req.method === 'POST') {
-      const body = await readBody(req);
+      const { body } = await readBody(req);
       const reason = (body.reason || '').trim() || 'aflyst af butikken';
       const b = store.cancelBooking(Number(body.id));
       if (b) {
@@ -449,7 +552,8 @@ const server = http.createServer(async (req, res) => {
 
     // --- Staff: close / reopen a day ---
     if (p === '/api/closures' && req.method === 'POST') {
-      const body = await readBody(req);
+      const { body, tooLarge } = await readBody(req);
+      if (tooLarge) return sendJson(res, 413, { error: 'Forespørgslen er for stor.' });
       if (!body.date || !body.reason) return sendJson(res, 400, { error: 'Dato og årsag skal udfyldes.' });
       const c = store.addClosure(body.date, body.reason);
 
@@ -486,7 +590,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 201, { ok: true, closure: c, cancelledCount });
     }
     if (p === '/api/closures' && req.method === 'DELETE') {
-      const body = await readBody(req);
+      const { body } = await readBody(req);
       store.removeClosure(body.date);
       return sendJson(res, 200, { ok: true });
     }
@@ -520,4 +624,8 @@ server.listen(config.port, () => {
     console.log('  ⚠  Bruger DEMO-personalekode "demo". Sæt STAFF_ACCESS_CODE i .env til produktion.');
   }
   console.log('');
+
+  // Sweep abandoned unpaid orders on a timer (and once shortly after boot).
+  setTimeout(reapPendingOrders, 10000).unref();
+  setInterval(reapPendingOrders, 5 * 60 * 1000).unref();
 });

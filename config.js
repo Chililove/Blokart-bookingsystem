@@ -67,6 +67,18 @@ module.exports = {
     enabled: true,
     mock: !process.env.FLATPAY_API_KEY,   // mock until a real key exists
     apiKey: process.env.FLATPAY_API_KEY || 'MOCK_FLATPAY_KEY',
+    // Needed to verify webhook signatures in production (see lib/flatpay.js).
+    webhookSecret: process.env.FLATPAY_WEBHOOK_SECRET || '',
+  },
+
+  // Abuse/robustness guards. Small caps keep storage sane and block junk;
+  // the rate limit slows scripted spam; pendingTtl frees carts held by
+  // abandoned checkouts so they don't stay "sold" forever.
+  limits: {
+    bodyMaxBytes: 16 * 1024,
+    nameMax: 80, phoneMax: 32, emailMax: 120, noteMax: 300,
+    rateWindowMs: 60 * 1000, rateMaxRequests: 12,
+    pendingTtlMinutes: 30,
   },
   googleCalendar: {
     enabled: true,
