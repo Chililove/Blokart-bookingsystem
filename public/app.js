@@ -5,12 +5,8 @@
 const state = { qtySingle:0, qtyDouble:0, date:null, duration:null, time:null, pay:'flatpay', cfg:null, lang:'da' };
 function tr() { return T[state.lang]; }
 
-// Escape anything user- or staff-supplied before it goes into innerHTML,
-// so a name/reason can never inject markup or script (stored XSS).
-function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-}
+// Shared with the staff page via validation.js (one XSS-escaping helper).
+const esc = Validation.esc;
 
 function applyLang() {
   document.documentElement.lang = state.lang;

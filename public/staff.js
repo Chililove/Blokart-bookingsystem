@@ -5,11 +5,8 @@ let LANG = 'da';
 try { const saved = localStorage.getItem('staffLang'); if (saved && S[saved]) LANG = saved; } catch (e) {}
 function tr() { return S[LANG]; }
 
-// Escape customer/staff-supplied text before it enters innerHTML (stored XSS).
-function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-}
+// Shared with the customer page via validation.js (one XSS-escaping helper).
+const esc = Validation.esc;
 
 function applyLang() {
   document.documentElement.lang = LANG;

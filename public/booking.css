@@ -1,11 +1,6 @@
 /* Styles specific to the customer booking page (index.html). */
 
-.langbar { display:flex; gap:6px; }
-.langbar button {
-  background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.4);
-  border-radius:6px; padding:4px 9px; font-weight:700; cursor:pointer; font-size:.85rem;
-}
-.langbar button.active { background:#fff; color:var(--sea); }
+/* .langbar lives in styles.css (shared with the staff page). */
 
 .phone-row { display:flex; gap:8px; }
 .phone-row select { max-width:130px; }

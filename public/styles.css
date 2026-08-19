@@ -127,6 +127,14 @@ input.invalid { border-color: var(--bad); }
 input.invalid:focus { border-color: var(--bad); box-shadow: 0 0 0 3px rgba(200,40,40,.18); }
 .field-error { color: var(--bad); font-size: .82rem; margin-top: 4px; }
 .field-error:empty { display: none; }
+
+/* Language switch in the header - shared by the customer and staff pages. */
+.langbar { display: flex; gap: 6px; }
+.langbar button {
+  background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4);
+  border-radius: 6px; padding: 4px 9px; font-weight: 700; cursor: pointer; font-size: .85rem;
+}
+.langbar button.active { background: #fff; color: var(--sea); }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .hint { font-size: .85rem; color: var(--muted); margin-top: 5px; }
 

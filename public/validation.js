@@ -6,6 +6,13 @@ window.Validation = (function () {
   const PHONE_DISALLOWED = /[^\d+\s()\-]/g;
   const digits = (v) => v.replace(/\D/g, '');
 
+  // Escape user/staff text before it goes into innerHTML (stored XSS guard).
+  // Shared so both pages escape identically.
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
   function isName(v) {
     const t = (v || '').trim();
     return t.length >= 1 && t.length <= 80;
@@ -77,5 +84,5 @@ window.Validation = (function () {
     return { validity, show, wire, touchAll };
   }
 
-  return { isName, isEmail, isPhone, attachPhoneFilter, createValidator };
+  return { esc, isName, isEmail, isPhone, attachPhoneFilter, createValidator };
 })();

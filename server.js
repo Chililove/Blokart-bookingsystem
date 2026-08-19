@@ -77,6 +77,15 @@ function dateStr(ms) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+// One day's [from, to] window in local time - used by slot listing, closures
+// and the day-close sweep, so the boundaries are defined in exactly one place.
+function dayWindow(date) {
+  return {
+    from: new Date(`${date}T00:00:00`).getTime(),
+    to: new Date(`${date}T23:59:59`).getTime(),
+  };
+}
+
 // --- Mutex ---
 // Serialize booking creation so two concurrent customers can't both pass the
 // capacity check on the same last cart (overbooking).
@@ -424,8 +433,7 @@ const server = http.createServer(async (req, res) => {
       // Fetch the whole day's bookings ONCE, then compute each slot in memory.
       // calcAvailability filters to each window, so one calendar call replaces
       // the ~15 we used to make per page load.
-      const dayStart = new Date(`${date}T00:00:00`).getTime();
-      const dayEnd = new Date(`${date}T23:59:59`).getTime();
+      const { from: dayStart, to: dayEnd } = dayWindow(date);
       const dayBookings = await bookingsInWindow(dayStart, dayEnd);
       for (let m = openHour * 60; m + dur <= closeHour * 60; m += slotStepMinutes) {
         const hh = String(Math.floor(m / 60)).padStart(2, '0');
@@ -520,7 +528,7 @@ const server = http.createServer(async (req, res) => {
       const to = Number(url.searchParams.get('to'));
       const bookings = store.getBookingsBetween(from, to);
       const closures = store.getClosures().filter((c) => {
-        const cms = new Date(`${c.date}T00:00:00`).getTime();
+        const cms = dayWindow(c.date).from;
         return cms >= from - 86400000 && cms <= to;
       });
       return sendJson(res, 200, { bookings, closures });
@@ -563,8 +571,7 @@ const server = http.createServer(async (req, res) => {
       // and notify customers, instead of one by one.
       let cancelledCount = 0;
       if (body.cancelExisting) {
-        const from = new Date(`${body.date}T00:00:00`).getTime();
-        const to = new Date(`${body.date}T23:59:59`).getTime();
+        const { from, to } = dayWindow(body.date);
         const affected = store.getBookingsBetween(from, to);
         for (const bk of affected) {
           store.cancelBooking(bk.id);

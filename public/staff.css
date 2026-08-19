@@ -34,9 +34,4 @@ table.cal th { background:#f0f5f6; color:var(--sea); }
 .tip .tip-text::after { content:""; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:#21303a; }
 .tip:hover .tip-text, .tip:focus .tip-text { visibility:visible; opacity:1; }
 
-.langbar { display:flex; gap:6px; }
-.langbar button {
-  background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.4);
-  border-radius:6px; padding:4px 9px; font-weight:700; cursor:pointer; font-size:.85rem;
-}
-.langbar button.active { background:#fff; color:var(--sea); }
+/* .langbar lives in styles.css (shared with the customer page). */
