@@ -122,6 +122,11 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
   outline: none; border-color: var(--teal); box-shadow: var(--ring);
 }
+/* Invalid field: red border + matching focus ring so the error is obvious. */
+input.invalid { border-color: var(--bad); }
+input.invalid:focus { border-color: var(--bad); box-shadow: 0 0 0 3px rgba(200,40,40,.18); }
+.field-error { color: var(--bad); font-size: .82rem; margin-top: 4px; }
+.field-error:empty { display: none; }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .hint { font-size: .85rem; color: var(--muted); margin-top: 5px; }
 

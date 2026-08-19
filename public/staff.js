@@ -161,8 +161,20 @@ function renderBookings(bookings) {
   }));
 }
 
+// Same shared validation module as the customer page (validation.js). Staff
+// type the full number, so the phone needs 8+ digits (no separate country code).
+const staffValidator = Validation.createValidator([
+  { id: 'sName',  test: (v) => Validation.isName(v),  msg: () => tr().errName },
+  { id: 'sPhone', phone: true, test: (v) => Validation.isPhone(v, 8, 15), msg: () => tr().errPhone },
+]);
+staffValidator.wire();
+
 // Create booking
 document.getElementById('createBtn').addEventListener('click', async () => {
+  // Block junk before it reaches the server; reveal red on any invalid field.
+  staffValidator.touchAll();
+  const fv = staffValidator.show(true);
+  if (!fv.sName || !fv.sPhone) return;
   const payload = {
     singleQty: Number(document.getElementById('sSingle').value) || 0,
     doubleQty: Number(document.getElementById('sDouble').value) || 0,

@@ -106,7 +106,8 @@
       <div class="row">
         <div>
           <label for="name"><span data-t="nameLabel">Navn</span> <span class="req">*</span></label>
-          <input type="text" id="name" />
+          <input type="text" id="name" maxlength="80" aria-describedby="nameErr" />
+          <div class="field-error" id="nameErr" role="alert"></div>
         </div>
         <div>
           <label for="phone"><span data-t="phoneLabel">Telefon</span> <span class="req">*</span></label>
@@ -119,13 +120,15 @@
               <option value="+47">🇳🇴 +47</option>
               <option value="+31">🇳🇱 +31</option>
             </select>
-            <input type="tel" id="phone" />
+            <input type="tel" id="phone" maxlength="20" inputmode="tel" aria-describedby="phoneErr" />
           </div>
+          <div class="field-error" id="phoneErr" role="alert"></div>
           <div class="hint" data-t="phoneHint">Påkrævet - vi ringer/sms’er hvis vejret tvinger os til at aflyse.</div>
         </div>
       </div>
       <label for="email" data-t="emailLabel">E-mail (valgfri)</label>
-      <input type="email" id="email" />
+      <input type="email" id="email" maxlength="120" aria-describedby="emailErr" />
+      <div class="field-error" id="emailErr" role="alert"></div>
 
       <label style="margin-top:18px;"><span id="payLabel" data-t="paymentLabel">Betaling</span> <span class="req">*</span></label>
       <div class="cart-options" id="payGroup" role="radiogroup" aria-labelledby="payLabel">
@@ -147,6 +150,7 @@
   </div>
 
   <script src="/translations.js"></script>
+  <script src="/validation.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

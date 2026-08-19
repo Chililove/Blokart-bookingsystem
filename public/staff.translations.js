@@ -33,6 +33,7 @@ const S = {
     created:(id)=>`✔ Booking #${id} oprettet.`,
     singleQtyLabel:'Antal single', doubleQtyLabel:'Antal dobbelt',
     createdN:(n)=>`✔ Booking oprettet (${n} vogn${n===1?'':'e'}).`,
+    errName:'Skriv et navn.', errPhone:'Skriv et gyldigt telefonnummer (mindst 8 cifre).',
     hUnit:'t',
   },
   en: {
@@ -68,6 +69,7 @@ const S = {
     created:(id)=>`✔ Booking #${id} created.`,
     singleQtyLabel:'Number of single', doubleQtyLabel:'Number of double',
     createdN:(n)=>`✔ Booking created (${n} cart${n===1?'':'s'}).`,
+    errName:'Enter a name.', errPhone:'Enter a valid phone number (at least 8 digits).',
     hUnit:'h',
   },
 };

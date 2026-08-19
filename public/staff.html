@@ -67,8 +67,8 @@
           <div><label data-t="time">Tid (HH:MM)</label><input id="sTime" placeholder="13:00" /></div>
         </div>
         <div class="row">
-          <div><label data-t="name">Navn</label><input id="sName" /></div>
-          <div><label><span data-t="phone">Telefon</span> <span class="req">*</span></label><input id="sPhone" placeholder="12 34 56 78" /></div>
+          <div><label for="sName" data-t="name">Navn</label><input id="sName" maxlength="80" aria-describedby="sNameErr" /><div class="field-error" id="sNameErr" role="alert"></div></div>
+          <div><label for="sPhone"><span data-t="phone">Telefon</span> <span class="req">*</span></label><input id="sPhone" maxlength="20" inputmode="tel" placeholder="12 34 56 78" aria-describedby="sPhoneErr" /><div class="field-error" id="sPhoneErr" role="alert"></div></div>
         </div>
         <div class="row">
           <div><label data-t="note">Note (valgfri)</label><input id="sNote" /></div>
@@ -81,6 +81,7 @@
   </div>
 
   <script src="/staff.translations.js"></script>
+  <script src="/validation.js"></script>
   <script src="/staff.js"></script>
 </body>
 </html>

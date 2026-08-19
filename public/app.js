@@ -146,7 +146,15 @@ payEls.forEach((el, i) => {
 });
 document.getElementById('date').addEventListener('change', e => { state.date = e.target.value; state.time=null; loadSlots(); update(); });
 document.getElementById('duration').addEventListener('change', e => { state.duration = Number(e.target.value); state.time=null; loadSlots(); update(); });
-['name','phone','email'].forEach(id => document.getElementById(id).addEventListener('input', update));
+// Shared validation module (validation.js) drives the red states + phone
+// filtering, so the customer and staff pages enforce the exact same rules.
+// Customer phone needs only 6 local digits (country code is a separate select).
+const validator = Validation.createValidator([
+  { id: 'name',  test: (v) => Validation.isName(v),  msg: () => tr().errName },
+  { id: 'email', test: (v) => Validation.isEmail(v), msg: () => tr().errEmail },
+  { id: 'phone', phone: true, test: (v) => Validation.isPhone(v, 6, 14), msg: () => tr().errPhone },
+]);
+validator.wire(update);
 document.getElementById('cc').addEventListener('change', update);
 
 async function loadSlots() {
@@ -205,13 +213,11 @@ function renderConsent() {
 }
 
 function update() {
-  const name = document.getElementById('name').value.trim();
-  const local = document.getElementById('phone').value.replace(/[^0-9]/g,'');
-  const phoneOk = local.length >= 6;
+  const v = validator.show(false);
   const consentEl = document.getElementById('consent');
   const consentOk = consentEl && consentEl.checked;
   const totalQty = state.qtySingle + state.qtyDouble;
-  const ready = totalQty >= 1 && state.date && state.time && name && phoneOk && consentOk;
+  const ready = totalQty >= 1 && state.date && state.time && v.name && v.email && v.phone && consentOk;
   document.getElementById('bookBtn').disabled = !ready;
   const sum = document.getElementById('summary');
   if (totalQty >= 1 && state.time) {
@@ -221,6 +227,10 @@ function update() {
 }
 
 document.getElementById('bookBtn').addEventListener('click', async () => {
+  // Guard: if the button was somehow reached while invalid, reveal all errors.
+  validator.touchAll();
+  const v = validator.show(true);
+  if (!v.name || !v.email || !v.phone) return;
   const btn = document.getElementById('bookBtn'); btn.disabled = true;
   const msg = document.getElementById('message'); msg.innerHTML = '';
   const fullPhone = document.getElementById('cc').value + document.getElementById('phone').value.replace(/[^0-9]/g,'');
