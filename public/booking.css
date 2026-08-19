@@ -26,7 +26,17 @@
 .stepbtn:disabled { opacity:.35; cursor:not-allowed; }
 .qnum { min-width:26px; text-align:center; font-size:1.2rem; font-weight:700; }
 
-.total-line { margin-top:14px; font-weight:700; color:var(--coral-dark); font-size:1.1rem; }
+/* Order summary (quantities, unit prices, total) */
+.order-summary { margin-top:16px; }
+.order-summary:empty { display:none; }
+.order-row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:9px 0; border-top:1px solid var(--line); }
+.order-row:first-child { border-top:none; }
+.oname { font-weight:600; color:var(--sea); }
+.ounit { font-size:.85rem; color:var(--muted); margin-top:1px; }
+.oprice { font-weight:600; white-space:nowrap; }
+.order-total { display:flex; justify-content:space-between; align-items:baseline; margin-top:6px; padding-top:12px; border-top:2px solid var(--line); }
+.order-total .olabel { font-weight:700; color:var(--sea); font-size:1.05rem; }
+.order-total .oamount { font-weight:800; color:var(--coral-dark); font-size:1.3rem; }
 
 .hero-art { position:absolute; left:28px; bottom:20px; width:138px; height:auto; opacity:.95; pointer-events:none; z-index:1; }
 @media (max-width:620px){ .hero-art { display:none; } }

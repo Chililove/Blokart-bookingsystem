@@ -68,11 +68,32 @@ function renderQty() {
     const key = type === 'double' ? 'qtyDouble' : 'qtySingle';
     btn.disabled = (d < 0 && state[key] <= 0) || (d > 0 && state[key] >= maxFor(type));
   });
-  const total = state.qtySingle*(state.cfg?.prices.single||0) + state.qtyDouble*(state.cfg?.prices.double||0);
-  const parts = [];
-  if (state.qtySingle > 0) parts.push(`${state.qtySingle}× ${tr().sShort}`);
-  if (state.qtyDouble > 0) parts.push(`${state.qtyDouble}× ${tr().dShort}`);
-  document.getElementById('totalLine').textContent = parts.length ? `${parts.join(' + ')} = ${total} kr.` : '';
+  renderOrderSummary();
+}
+
+// Group total formatted for the current language (thousands separator).
+function fmt(n) {
+  const loc = state.lang === 'de' ? 'de-DE' : state.lang === 'en' ? 'en-GB' : 'da-DK';
+  return n.toLocaleString(loc);
+}
+function orderLine(qty, name, price) {
+  return `<div class="order-row"><div><div class="oname">${name}</div>` +
+         `<div class="ounit">${qty} × ${fmt(price)} kr.</div></div>` +
+         `<div class="oprice">${fmt(qty * price)} kr.</div></div>`;
+}
+function renderOrderSummary() {
+  const el = document.getElementById('orderSummary');
+  if (!state.cfg) { el.innerHTML = ''; return; }
+  const p = state.cfg.prices;
+  let html = '';
+  if (state.qtySingle > 0) html += orderLine(state.qtySingle, tr().singleTitle, p.single);
+  if (state.qtyDouble > 0) html += orderLine(state.qtyDouble, tr().doubleTitle, p.double);
+  if (html) {
+    const total = state.qtySingle * p.single + state.qtyDouble * p.double;
+    html += `<div class="order-total"><span class="olabel">${tr().totalWord}</span>` +
+            `<span class="oamount">${fmt(total)} kr.</span></div>`;
+  }
+  el.innerHTML = html;
 }
 
 // Availability check - must mirror server-side math
