@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book blokart - Club Fanø</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .langbar { display:flex; gap:6px; }
+    .langbar button {
+      background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.4);
+      border-radius:6px; padding:4px 9px; font-weight:700; cursor:pointer; font-size:.85rem;
+    }
+    .langbar button.active { background:#fff; color:var(--sea); }
+    .phone-row { display:flex; gap:8px; }
+    .phone-row select { max-width:130px; }
+    .qty-card { display:flex; align-items:center; justify-content:space-between; gap:12px;
+      border:1px solid var(--line); border-radius:14px; padding:14px 16px; background:#fff; margin-top:12px; }
+    .qty-card h3 { margin:0 0 2px; color:var(--sea); }
+    .qty-card .price { color:var(--coral-dark); font-weight:700; }
+    .stepper { display:flex; align-items:center; gap:12px; }
+    .stepbtn { width:38px; height:38px; border-radius:50%; border:2px solid var(--sea); background:#fff;
+      color:var(--sea); font-size:1.3rem; font-weight:700; cursor:pointer; line-height:1; }
+    .stepbtn:hover:not(:disabled) { background:var(--sea); color:#fff; }
+    .stepbtn:disabled { opacity:.35; cursor:not-allowed; }
+    .qnum { min-width:26px; text-align:center; font-size:1.2rem; font-weight:700; }
+    .total-line { margin-top:14px; font-weight:700; color:var(--coral-dark); font-size:1.1rem; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <img class="logo" src="https://clubfanoe.dk/wp-content/uploads/2024/04/CLub-fanoe-logo-hvid.png" alt="Club Fanø" />
+    <div class="title" data-t="navTitle">Blokart booking</div>
+    <div class="spacer"></div>
+    <div class="langbar">
+      <button data-lang="da">DA</button>
+      <button data-lang="de">DE</button>
+      <button data-lang="en">EN</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1 data-t="heroH1">Book din blokart på stranden</h1>
+    <p data-t="heroP">Oplev fart og spænding på Fanøs strand. Vælg antal, dato og tid.</p>
+  </section>
+
+  <div class="wrap">
+    <!-- Step 1: carts + quantity -->
+    <div class="card">
+      <div class="step-label" data-t="step1">Trin 1</div>
+      <h2 data-t="chooseCart">Vælg vogne og antal</h2>
+      <div class="hint" data-t="qtyHint">Vælg hvor mange vogne I vil booke. Skal I holde et event, kan I booke flere på én gang.</div>
+
+      <div class="qty-card">
+        <div>
+          <h3 data-t="singleTitle">Single blokart</h3>
+          <div class="desc"><span class="price" id="priceSingle">-</span> · <span data-t="singleDesc">Til én person.</span></div>
+        </div>
+        <div class="stepper">
+          <button type="button" class="stepbtn" data-q="single" data-d="-1">−</button>
+          <span class="qnum" id="qSingle">0</span>
+          <button type="button" class="stepbtn" data-q="single" data-d="1">+</button>
+        </div>
+      </div>
+
+      <div class="qty-card">
+        <div>
+          <h3 data-t="doubleTitle">Dobbeltsæde blokart</h3>
+          <div class="desc"><span class="price" id="priceDouble">-</span> · <span data-t="doubleDesc">Til to personer.</span></div>
+        </div>
+        <div class="stepper">
+          <button type="button" class="stepbtn" data-q="double" data-d="-1">−</button>
+          <span class="qnum" id="qDouble">0</span>
+          <button type="button" class="stepbtn" data-q="double" data-d="1">+</button>
+        </div>
+      </div>
+
+      <div class="total-line" id="totalLine"></div>
+    </div>
+
+    <!-- Step 2: date + time -->
+    <div class="card">
+      <div class="step-label" data-t="step2">Trin 2</div>
+      <h2 data-t="chooseTime">Vælg dato og tid</h2>
+      <div class="row">
+        <div>
+          <label for="date"><span data-t="dateLabel">Dato</span> <span class="req">*</span></label>
+          <input type="date" id="date" />
+        </div>
+        <div>
+          <label for="duration"><span data-t="durationLabel">Varighed</span> <span class="req">*</span></label>
+          <select id="duration"></select>
+        </div>
+      </div>
+      <div id="closedBanner"></div>
+      <label style="margin-top:16px;" data-t="availableTimes">Ledige tider</label>
+      <div class="hint" data-t="availableHint">S = ledige single, D = ledige dobbelt. Tider der ikke kan rumme jeres antal er gråede ud.</div>
+      <div class="slots" id="slots"><span class="hint" data-t="pickDate">Vælg en dato for at se ledige tider…</span></div>
+    </div>
+
+    <!-- Step 3: contact + payment -->
+    <div class="card">
+      <div class="step-label" data-t="step3">Trin 3</div>
+      <h2 data-t="yourInfo">Dine oplysninger</h2>
+      <div class="row">
+        <div>
+          <label for="name"><span data-t="nameLabel">Navn</span> <span class="req">*</span></label>
+          <input type="text" id="name" />
+        </div>
+        <div>
+          <label for="phone"><span data-t="phoneLabel">Telefon</span> <span class="req">*</span></label>
+          <div class="phone-row">
+            <select id="cc">
+              <option value="+45">🇩🇰 +45</option>
+              <option value="+49">🇩🇪 +49</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+46">🇸🇪 +46</option>
+              <option value="+47">🇳🇴 +47</option>
+              <option value="+31">🇳🇱 +31</option>
+            </select>
+            <input type="tel" id="phone" />
+          </div>
+          <div class="hint" data-t="phoneHint">Påkrævet - vi ringer/sms’er hvis vejret tvinger os til at aflyse.</div>
+        </div>
+      </div>
+      <label for="email" data-t="emailLabel">E-mail (valgfri)</label>
+      <input type="email" id="email" />
+
+      <label style="margin-top:18px;"><span data-t="paymentLabel">Betaling</span> <span class="req">*</span></label>
+      <div class="cart-options">
+        <div class="cart-option selected" data-pay="flatpay">
+          <h3 data-t="payNow">Betal nu</h3>
+          <div class="desc" data-t="payNowDesc">Sikker betaling med kort.</div>
+        </div>
+        <div class="cart-option" data-pay="shop">
+          <h3 data-t="payShop">Betal i butikken</h3>
+          <div class="desc" data-t="payShopDesc">Reservér nu, betal når I møder op.</div>
+        </div>
+      </div>
+
+      <div id="consentBox" style="margin-top:16px;"></div>
+      <div id="message"></div>
+      <button class="btn" id="bookBtn" style="margin-top:14px;" disabled data-t="bookBtn">Gennemfør booking</button>
+      <div class="hint" id="summary" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+<script>
+const T = {
+  da: {
+    navTitle:'Blokart booking',
+    heroH1:'Book din blokart på stranden',
+    heroP:'Oplev fart og spænding på Fanøs strand. Vælg antal, dato og tid.',
+    step1:'Trin 1', chooseCart:'Vælg vogne og antal',
+    qtyHint:'Vælg hvor mange vogne I vil booke. Skal I holde et event, kan I booke flere på én gang.',
+    singleTitle:'Single blokart', singleDesc:'Til én person.',
+    doubleTitle:'Dobbeltsæde blokart', doubleDesc:'Til to personer.',
+    step2:'Trin 2', chooseTime:'Vælg dato og tid',
+    dateLabel:'Dato', durationLabel:'Varighed',
+    availableTimes:'Ledige tider',
+    availableHint:'S = ledige single, D = ledige dobbelt. Tider der ikke kan rumme jeres antal er gråede ud.',
+    pickDate:'Vælg en dato for at se ledige tider…',
+    pickQty:'Vælg mindst én vogn i trin 1…',
+    loadingTimes:'Henter ledige tider…',
+    step3:'Trin 3', yourInfo:'Dine oplysninger',
+    nameLabel:'Navn', phoneLabel:'Telefon',
+    phoneHint:'Påkrævet - vi ringer/sms’er hvis vejret tvinger os til at aflyse.',
+    emailLabel:'E-mail (valgfri)',
+    paymentLabel:'Betaling', payNow:'Betal nu', payNowDesc:'Sikker betaling med kort.',
+    payShop:'Betal i butikken', payShopDesc:'Reservér nu, betal når I møder op.',
+    bookBtn:'Gennemfør booking',
+    consentAccept:'Jeg accepterer', consentTerms:'handelsbetingelserne', consentAnd:'og', consentPrivacy:'privatlivspolitikken',
+    hour:'time', hours:'timer',
+    sShort:'single', dShort:'dobbelt', totalWord:'I alt',
+    closedTitle:'Vi har lukket for booking denne dag:',
+    closedSub:'Vælg venligst en anden dato - du kan stadig booke andre dage.',
+    okShop:(total)=>`✔ Tak! Jeres booking er reserveret (${total} kr.). Betal i butikken når I møder op. Vi har jeres nummer hvis vejret driller.`,
+  },
+  de: {
+    navTitle:'Blokart Buchung',
+    heroH1:'Buche deinen Blokart am Strand',
+    heroP:'Erlebe Tempo und Spaß am Strand von Fanø. Wähle Anzahl, Datum und Zeit.',
+    step1:'Schritt 1', chooseCart:'Wagen und Anzahl wählen',
+    qtyHint:'Wähle, wie viele Wagen ihr buchen möchtet. Für ein Event könnt ihr mehrere auf einmal buchen.',
+    singleTitle:'Single Blokart', singleDesc:'Für eine Person.',
+    doubleTitle:'Doppelsitz Blokart', doubleDesc:'Für zwei Personen.',
+    step2:'Schritt 2', chooseTime:'Datum und Zeit wählen',
+    dateLabel:'Datum', durationLabel:'Dauer',
+    availableTimes:'Freie Zeiten',
+    availableHint:'S = freie Single, D = freie Doppel. Zeiten, die eure Anzahl nicht fassen, sind ausgegraut.',
+    pickDate:'Wähle ein Datum, um freie Zeiten zu sehen…',
+    pickQty:'Wähle mindestens einen Wagen in Schritt 1…',
+    loadingTimes:'Lade freie Zeiten…',
+    step3:'Schritt 3', yourInfo:'Deine Angaben',
+    nameLabel:'Name', phoneLabel:'Telefon',
+    phoneHint:'Erforderlich - wir rufen/simsen, falls wir wegen Wetter absagen müssen.',
+    emailLabel:'E-Mail (optional)',
+    paymentLabel:'Zahlung', payNow:'Jetzt bezahlen', payNowDesc:'Sichere Kartenzahlung.',
+    payShop:'Im Laden bezahlen', payShopDesc:'Jetzt reservieren, bei Ankunft bezahlen.',
+    bookBtn:'Buchung abschließen',
+    consentAccept:'Ich akzeptiere die', consentTerms:'Handelsbedingungen', consentAnd:'und die', consentPrivacy:'Datenschutzerklärung',
+    hour:'Stunde', hours:'Stunden',
+    sShort:'Single', dShort:'Doppelsitz', totalWord:'Gesamt',
+    closedTitle:'An diesem Tag ist die Buchung geschlossen:',
+    closedSub:'Bitte wähle ein anderes Datum - andere Tage sind weiterhin buchbar.',
+    okShop:(total)=>`✔ Danke! Eure Buchung ist reserviert (${total} kr.). Bezahlt im Laden bei Ankunft. Wir haben eure Nummer, falls das Wetter nicht mitspielt.`,
+  },
+  en: {
+    navTitle:'Blokart booking',
+    heroH1:'Book your blokart on the beach',
+    heroP:'Experience speed and fun on Fanø beach. Choose quantity, date and time.',
+    step1:'Step 1', chooseCart:'Choose carts and quantity',
+    qtyHint:'Choose how many carts you want to book. Holding an event? You can book several at once.',
+    singleTitle:'Single blokart', singleDesc:'For one person.',
+    doubleTitle:'Two-seater blokart', doubleDesc:'For two people.',
+    step2:'Step 2', chooseTime:'Choose date and time',
+    dateLabel:'Date', durationLabel:'Duration',
+    availableTimes:'Available times',
+    availableHint:'S = single free, D = double free. Times that cannot fit your quantity are greyed out.',
+    pickDate:'Pick a date to see available times…',
+    pickQty:'Choose at least one cart in step 1…',
+    loadingTimes:'Loading available times…',
+    step3:'Step 3', yourInfo:'Your details',
+    nameLabel:'Name', phoneLabel:'Phone',
+    phoneHint:'Required - we call/text you if the weather forces us to cancel.',
+    emailLabel:'Email (optional)',
+    paymentLabel:'Payment', payNow:'Pay now', payNowDesc:'Secure card payment.',
+    payShop:'Pay in the shop', payShopDesc:'Reserve now, pay when you arrive.',
+    bookBtn:'Complete booking',
+    consentAccept:'I accept the', consentTerms:'terms & conditions', consentAnd:'and the', consentPrivacy:'privacy policy',
+    hour:'hour', hours:'hours',
+    sShort:'single', dShort:'two-seater', totalWord:'Total',
+    closedTitle:'Booking is closed on this day:',
+    closedSub:'Please choose another date - other days are still bookable.',
+    okShop:(total)=>`✔ Thank you! Your booking is reserved (${total} kr.). Pay in the shop when you arrive. We have your number in case the weather acts up.`,
+  },
+};
+
+const state = { qtySingle:0, qtyDouble:0, date:null, duration:null, time:null, pay:'flatpay', cfg:null, lang:'da' };
+function tr() { return T[state.lang]; }
+
+function applyLang() {
+  document.documentElement.lang = state.lang;
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const v = tr()[el.dataset.t];
+    if (typeof v === 'string') el.textContent = v;
+  });
+  document.querySelectorAll('.langbar button').forEach(b => b.classList.toggle('active', b.dataset.lang === state.lang));
+  rebuildDurations(); renderConsent(); renderQty(); loadSlots(); update();
+}
+document.querySelectorAll('.langbar button').forEach(b => b.addEventListener('click', () => { state.lang = b.dataset.lang; applyLang(); }));
+
+async function loadConfig() {
+  state.cfg = await (await fetch('/api/config')).json();
+  document.getElementById('priceSingle').textContent = state.cfg.prices.single + ' kr.';
+  document.getElementById('priceDouble').textContent = state.cfg.prices.double + ' kr.';
+  state.duration = state.cfg.durationsMinutes[0];
+  const today = new Date();
+  const max = new Date(Date.now() + state.cfg.maxDaysAhead*86400000);
+  const di = document.getElementById('date');
+  di.min = today.toISOString().slice(0,10);
+  di.max = max.toISOString().slice(0,10);
+  rebuildDurations();
+}
+
+function rebuildDurations() {
+  if (!state.cfg) return;
+  const dur = document.getElementById('duration');
+  const cur = state.duration;
+  dur.innerHTML = '';
+  state.cfg.durationsMinutes.forEach(m => {
+    const o = document.createElement('option');
+    const h = m/60;
+    o.value = m; o.textContent = h + ' ' + (h === 1 ? tr().hour : tr().hours);
+    dur.appendChild(o);
+  });
+  dur.value = cur;
+}
+
+// Quantity steppers
+function maxFor(type) {
+  if (!state.cfg) return 0;
+  return type === 'double'
+    ? state.cfg.fleet.permanentDouble + state.cfg.fleet.convertibleDouble
+    : state.cfg.fleet.totalSingle;
+}
+document.querySelectorAll('.stepbtn').forEach(btn => btn.addEventListener('click', () => {
+  const type = btn.dataset.q, d = Number(btn.dataset.d);
+  const key = type === 'double' ? 'qtyDouble' : 'qtySingle';
+  const next = Math.max(0, Math.min(maxFor(type), state[key] + d));
+  state[key] = next;
+  state.time = null; // re-validate slot against new quantity
+  renderQty(); loadSlots(); update();
+}));
+
+function renderQty() {
+  document.getElementById('qSingle').textContent = state.qtySingle;
+  document.getElementById('qDouble').textContent = state.qtyDouble;
+  // disable +/- at fleet limits
+  document.querySelectorAll('.stepbtn').forEach(btn => {
+    const type = btn.dataset.q, d = Number(btn.dataset.d);
+    const key = type === 'double' ? 'qtyDouble' : 'qtySingle';
+    btn.disabled = (d < 0 && state[key] <= 0) || (d > 0 && state[key] >= maxFor(type));
+  });
+  const total = state.qtySingle*(state.cfg?.prices.single||0) + state.qtyDouble*(state.cfg?.prices.double||0);
+  const parts = [];
+  if (state.qtySingle > 0) parts.push(`${state.qtySingle}× ${tr().sShort}`);
+  if (state.qtyDouble > 0) parts.push(`${state.qtyDouble}× ${tr().dShort}`);
+  document.getElementById('totalLine').textContent = parts.length ? `${parts.join(' + ')} = ${total} kr.` : '';
+}
+
+// Availability check - must mirror server-side math
+function fits(sBooked, dBooked, addS, addD) {
+  const f = state.cfg.fleet;
+  const nd = dBooked + addD, ns = sBooked + addS;
+  if (nd > f.permanentDouble + f.convertibleDouble) return false;
+  const conv = Math.min(Math.max(nd - f.permanentDouble, 0), f.convertibleDouble);
+  if (ns + conv > f.totalSingle) return false;
+  return true;
+}
+
+document.querySelectorAll('[data-pay]').forEach(el => el.addEventListener('click', () => {
+  document.querySelectorAll('[data-pay]').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected'); state.pay = el.dataset.pay; update();
+}));
+document.getElementById('date').addEventListener('change', e => { state.date = e.target.value; state.time=null; loadSlots(); update(); });
+document.getElementById('duration').addEventListener('change', e => { state.duration = Number(e.target.value); state.time=null; loadSlots(); update(); });
+['name','phone','email'].forEach(id => document.getElementById(id).addEventListener('input', update));
+document.getElementById('cc').addEventListener('change', update);
+
+async function loadSlots() {
+  const box = document.getElementById('slots');
+  const banner = document.getElementById('closedBanner');
+  banner.innerHTML = '';
+  if (!state.date) { box.innerHTML = `<span class="hint">${tr().pickDate}</span>`; return; }
+  box.innerHTML = `<span class="hint">${tr().loadingTimes}</span>`;
+  const data = await (await fetch(`/api/slots?date=${state.date}&durationMinutes=${state.duration}`)).json();
+  if (data.closure) {
+    banner.innerHTML = `<div class="closed-banner">🚫 ${tr().closedTitle}<br><strong>${data.closure.reason}</strong><br>${tr().closedSub}</div>`;
+    box.innerHTML = ''; return;
+  }
+  const totalQty = state.qtySingle + state.qtyDouble;
+  if (totalQty < 1) { box.innerHTML = `<span class="hint">${tr().pickQty}</span>`; return; }
+  box.innerHTML = '';
+  data.slots.forEach(s => {
+    const ok = !s.past && fits(s.sBooked, s.dBooked, state.qtySingle, state.qtyDouble);
+    const div = document.createElement('div');
+    div.className = 'slot' + (ok ? '' : ' full');
+    div.innerHTML = `${s.time}<small>S ${s.singleAvailable} · D ${s.doubleAvailable}</small>`;
+    if (ok) div.addEventListener('click', () => {
+      document.querySelectorAll('.slot').forEach(x => x.classList.remove('selected'));
+      div.classList.add('selected'); state.time = s.time; update();
+    });
+    box.appendChild(div);
+  });
+  // drop selection if chosen slot no longer fits
+  if (state.time && !document.querySelector('.slot.selected')) state.time = null;
+}
+
+function renderConsent() {
+  if (!state.cfg) return;
+  const c = state.cfg.links || {};
+  const termsTxt = tr().consentTerms, privTxt = tr().consentPrivacy;
+  const terms = c.termsUrl ? `<a href="${c.termsUrl}" target="_blank" rel="noopener">${termsTxt}</a>` : termsTxt;
+  const priv = c.privacyUrl ? `<a href="${c.privacyUrl}" target="_blank" rel="noopener">${privTxt}</a>` : privTxt;
+  document.getElementById('consentBox').innerHTML =
+    `<label style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;">
+       <input type="checkbox" id="consent" style="width:auto;margin-top:4px;" />
+       <span>${tr().consentAccept} ${terms} ${tr().consentAnd} ${priv} <span class="req">*</span></span>
+     </label>`;
+  document.getElementById('consent').addEventListener('change', update);
+}
+
+function update() {
+  const name = document.getElementById('name').value.trim();
+  const local = document.getElementById('phone').value.replace(/[^0-9]/g,'');
+  const phoneOk = local.length >= 6;
+  const consentEl = document.getElementById('consent');
+  const consentOk = consentEl && consentEl.checked;
+  const totalQty = state.qtySingle + state.qtyDouble;
+  const ready = totalQty >= 1 && state.date && state.time && name && phoneOk && consentOk;
+  document.getElementById('bookBtn').disabled = !ready;
+  const sum = document.getElementById('summary');
+  if (totalQty >= 1 && state.time) {
+    const total = state.qtySingle*state.cfg.prices.single + state.qtyDouble*state.cfg.prices.double;
+    sum.textContent = `${state.date} · ${state.time} · ${state.duration/60} ${state.duration/60===1?tr().hour:tr().hours} · ${total} kr.`;
+  } else sum.textContent = '';
+}
+
+document.getElementById('bookBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('bookBtn'); btn.disabled = true;
+  const msg = document.getElementById('message'); msg.innerHTML = '';
+  const fullPhone = document.getElementById('cc').value + document.getElementById('phone').value.replace(/[^0-9]/g,'');
+  const payload = {
+    singleQty: state.qtySingle, doubleQty: state.qtyDouble,
+    date: state.date, startTime: state.time, durationMinutes: state.duration,
+    name: document.getElementById('name').value, phone: fullPhone,
+    email: document.getElementById('email').value, payment: state.pay, lang: state.lang,
+    consent: !!(document.getElementById('consent') && document.getElementById('consent').checked),
+  };
+  const res = await fetch('/api/bookings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+  const data = await res.json();
+  if (!data.ok) { msg.innerHTML = `<div class="notice bad">${data.error}</div>`; loadSlots(); update(); return; }
+  if (data.payment === 'flatpay') { window.location.href = data.checkoutUrl; }
+  else {
+    msg.innerHTML = `<div class="notice ok">${tr().okShop(data.total)}</div>`;
+    document.getElementById('summary').textContent = '';
+    // reset to prevent accidental repeat booking
+    state.qtySingle = 0; state.qtyDouble = 0; state.time = null;
+    renderQty(); loadSlots();
+  }
+});
+
+(function initLang(){
+  const b = (navigator.language || 'da').slice(0,2).toLowerCase();
+  state.lang = ['da','de','en'].includes(b) ? b : 'da';
+})();
+loadConfig().then(applyLang);
+</script>
+</body>
+</html>

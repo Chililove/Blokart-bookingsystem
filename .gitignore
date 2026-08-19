@@ -1,0 +1,19 @@
+# Secrets — must NEVER be committed
+.env
+google-key.json
+*-key.json
+
+# Local data (bookings) — production uses a real database instead
+data.json
+
+# Internal notes/guides — keep out of the public repo
+PROJECT-NOTES.md
+HOSTING.md
+HANDELSBETINGELSER-UDKAST.md
+GDPR-UDKAST.md
+GOOGLE-CALENDAR-SETUP.md
+PAUSE-google-kalender-næste-skridt.md
+
+node_modules/
+*.log
+.DS_Store

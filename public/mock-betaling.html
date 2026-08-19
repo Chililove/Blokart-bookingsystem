@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Betaling (demo) – Club Fanø</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <img class="logo" src="https://clubfanoe.dk/wp-content/uploads/2024/04/CLub-fanoe-logo-hvid.png" alt="Club Fanø" />
+    <div class="title">Betaling</div>
+  </header>
+  <div class="wrap">
+    <div class="card" style="max-width:480px;margin:30px auto;text-align:center;">
+      <div class="notice warn">Dette er en DEMO-betalingsside (Flatpay er ikke koblet på endnu).<br>I virkeligheden ville kunden her se Flatpays sikre kort-betaling.</div>
+      <h2>Beløb at betale</h2>
+      <p style="font-size:2rem;font-weight:700;color:var(--coral-dark);" id="amount">– kr.</p>
+      <button class="btn" id="pay">Betal nu (simulér)</button>
+      <div id="result" style="margin-top:16px;"></div>
+    </div>
+  </div>
+<script>
+const q = new URLSearchParams(location.search);
+const orderId = q.get('orderId');
+document.getElementById('amount').textContent = (q.get('amount') || '–') + ' kr.';
+
+document.getElementById('pay').addEventListener('click', async () => {
+  document.getElementById('pay').disabled = true;
+  // stands in for Flatpay's server-to-server webhook
+  await fetch('/api/payments/webhook', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ orderId, status: 'paid', paymentId: q.get('paymentId') })
+  });
+  document.getElementById('result').innerHTML =
+    `<div class="notice ok">✔ Betaling gennemført! Din booking er bekræftet og lagt i butikkens kalender.</div>
+     <a class="btn btn-secondary" href="/">Lav en ny booking</a>`;
+});
+</script>
+</body>
+</html>

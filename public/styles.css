@@ -1,0 +1,150 @@
+/* Shared styles for customer + staff pages. Coastal palette from clubfanoe.dk;
+   warm accent reserved for "Book" actions. */
+
+:root {
+  --sea:        #0e4d64;   /* headings, header */
+  --sea-dark:   #0a3a4d;
+  --teal:       #1c93a8;   /* accents, links */
+  --sand:       #f6efe1;   /* background */
+  --coral:      #e8743b;   /* "Book" actions */
+  --coral-dark: #cf5f2b;
+  --ink:        #21303a;   /* body text */
+  --muted:      #6b7c87;
+  --card:       #ffffff;
+  --ok:         #2f9e6f;
+  --bad:        #c0463b;
+  --line:       #e3dcce;
+  --radius:     14px;
+  --shadow:     0 6px 22px rgba(14, 77, 100, 0.10);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--sand);
+  line-height: 1.55;
+}
+
+/* --- Header --------------------------------------------------------------- */
+header.topbar {
+  background: var(--sea);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow);
+}
+header.topbar img.logo { height: 42px; }
+header.topbar .title { font-weight: 700; font-size: 1.15rem; letter-spacing: .3px; }
+header.topbar .spacer { flex: 1; }
+header.topbar a.phone { color: #fff; text-decoration: none; font-weight: 600; opacity: .95; }
+
+/* --- Hero ----------------------------------------------------------------- */
+.hero {
+  background: linear-gradient(120deg, var(--sea) 0%, var(--teal) 100%);
+  color: #fff;
+  padding: 38px 20px;
+  text-align: center;
+}
+.hero h1 { margin: 0 0 8px; font-size: 1.9rem; }
+.hero p { margin: 0 auto; max-width: 620px; opacity: .95; }
+
+/* --- Layout -------------------------------------------------------------- */
+.wrap { max-width: 920px; margin: 0 auto; padding: 24px 16px 60px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px;
+  margin-bottom: 20px;
+}
+h2 { color: var(--sea); margin-top: 0; }
+.step-label { font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--teal); font-weight: 700; }
+
+/* --- Cart selection ------------------------------------------------------- */
+.cart-options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px; }
+.cart-option {
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: .15s;
+  background: #fff;
+}
+.cart-option:hover { border-color: var(--teal); }
+.cart-option.selected { border-color: var(--coral); background: #fff7f2; }
+.cart-option h3 { margin: 0 0 4px; color: var(--sea); }
+.cart-option .price { font-weight: 700; color: var(--coral-dark); }
+.cart-option .desc { font-size: .9rem; color: var(--muted); }
+
+/* --- Form fields ---------------------------------------------------------- */
+label { display: block; font-weight: 600; margin: 14px 0 6px; }
+label .req { color: var(--coral-dark); }
+input, select, textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--teal); border-color: var(--teal); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.hint { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+
+/* --- Time slots ----------------------------------------------------------- */
+.slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.slot {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  min-width: 64px;
+  text-align: center;
+}
+.slot small { display: block; font-weight: 500; font-size: .72rem; color: var(--muted); }
+.slot.selected { border-color: var(--coral); background: #fff7f2; }
+.slot.full { opacity: .4; cursor: not-allowed; text-decoration: line-through; }
+
+/* --- Buttons -------------------------------------------------------------- */
+.btn {
+  display: inline-block;
+  background: var(--coral);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 26px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .15s;
+}
+.btn:hover { background: var(--coral-dark); }
+.btn:disabled { background: #c9c2b4; cursor: not-allowed; }
+.btn-secondary { background: var(--sea); }
+.btn-secondary:hover { background: var(--sea-dark); }
+.btn-ghost { background: transparent; color: var(--sea); border: 2px solid var(--sea); }
+
+/* --- Messages ------------------------------------------------------------- */
+.notice { padding: 12px 14px; border-radius: 10px; margin: 12px 0; font-weight: 600; }
+.notice.ok  { background: #e8f6ee; color: var(--ok);  border: 1px solid #bfe6d0; }
+.notice.bad { background: #fbeae8; color: var(--bad); border: 1px solid #f1c4bf; }
+.notice.warn{ background: #fff4e2; color: #9a6212; border: 1px solid #f3dca8; }
+
+.closed-banner {
+  background: #fff4e2; border: 1px solid #f3dca8; color: #9a6212;
+  padding: 14px; border-radius: 10px; font-weight: 600; margin-top: 10px;
+}
+
+@media (max-width: 620px) {
+  .cart-options, .row { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 1.5rem; }
+}

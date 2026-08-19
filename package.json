@@ -1,0 +1,16 @@
+{
+  "name": "club-fanoe-blokart-booking",
+  "version": "1.0.0",
+  "description": "Bookingsystem til blokart-udlejning hos Club Fanø",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "demo": "node seed-demo.js && node server.js",
+    "reminders": "node reminders.js",
+    "test": "node test-availability.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}
