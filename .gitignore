@@ -5,6 +5,8 @@ google-key.json
 
 # Local data (bookings) — production uses a real database instead
 data.json
+data.json.tmp-*
+data.json.corrupt-*
 
 # Internal notes/guides — keep out of the public repo
 PROJECT-NOTES.md

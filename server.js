@@ -4,6 +4,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const config = require('./config');
 const store = require('./lib/store');
@@ -32,9 +33,13 @@ function readBody(req) {
   });
 }
 
-// Trivial auth for the prototype; real logins are a later job.
+// Trivial auth for the prototype; real logins are a later job. Constant-time
+// compare so the shared code can't be guessed by timing the response.
 function isStaff(req) {
-  return req.headers['x-staff-code'] === config.staffAccessCode;
+  const given = String(req.headers['x-staff-code'] || '');
+  const want = String(config.staffAccessCode);
+  const a = Buffer.from(given), b = Buffer.from(want);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 // Phone required so staff can call to cancel in bad weather. Lenient on
@@ -504,7 +509,8 @@ server.listen(config.port, () => {
   console.log(`  ${config.businessName} – Blokart booking`);
   console.log(`  ------------------------------------------`);
   console.log(`  Kundeside:   http://localhost:${config.port}/`);
-  console.log(`  Personale:   http://localhost:${config.port}/staff.html  (kode: ${config.staffAccessCode})`);
+  // Only echo the code for the public 'demo' fallback; never log a real secret.
+  console.log(`  Personale:   http://localhost:${config.port}/staff.html  (kode: ${config.staffAccessCode === 'demo' ? 'demo' : 'se STAFF_ACCESS_CODE i .env'})`);
   console.log(`  Flatpay:     ${config.flatpay.mock ? 'MOCK (ingen rigtig nøgle endnu)' : 'AKTIV'}`);
   console.log(`  Google Cal:  ${config.googleCalendar.mock ? 'MOCK (ingen rigtig kalender endnu)' : 'AKTIV'}`);
   console.log(`  SMS:         ${config.notifications.smsMock ? 'MOCK (skrives i terminalen)' : 'AKTIV'}`);

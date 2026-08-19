@@ -5,6 +5,12 @@ let LANG = 'da';
 try { const saved = localStorage.getItem('staffLang'); if (saved && S[saved]) LANG = saved; } catch (e) {}
 function tr() { return S[LANG]; }
 
+// Escape customer/staff-supplied text before it enters innerHTML (stored XSS).
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
 function applyLang() {
   document.documentElement.lang = LANG;
   document.querySelectorAll('[data-t]').forEach(el => {
@@ -89,7 +95,7 @@ async function refresh() {
 function renderClosure(closures, closure) {
   const area = document.getElementById('closureArea');
   if (closure) {
-    area.innerHTML = `<div class="closed-banner">${tr().closedBanner(closure.reason)}
+    area.innerHTML = `<div class="closed-banner">${tr().closedBanner(esc(closure.reason))}
       <button class="btn btn-ghost" id="openDay" style="margin-left:10px;padding:6px 16px;">${tr().reopen}</button></div>`;
     document.getElementById('openDay').addEventListener('click', async () => {
       await fetch('/api/closures', { method:'DELETE', headers: authHeaders(), body: JSON.stringify({ date: currentDay }) });
@@ -140,7 +146,7 @@ function renderBookings(bookings) {
     html += `<tr>
       <td>${hhmm(t)}–${hhmm(e)}</td>
       <td><span class="pill ${b.type}">${b.type==='double'?tr().double:tr().single}</span></td>
-      <td>${b.name}<br><a href="tel:${b.phone}">${b.phone}</a>${statusTxt}</td>
+      <td>${esc(b.name)}<br><a href="tel:${encodeURIComponent(b.phone)}">${esc(b.phone)}</a>${statusTxt}</td>
       <td><span class="pill ${b.source}">${b.source==='staff'?tr().shop:tr().online}</span></td>
       <td><button class="xbtn" data-id="${b.id}">${tr().cancel}</button></td>
     </tr>`;
@@ -178,7 +184,7 @@ document.getElementById('createBtn').addEventListener('click', async () => {
     ['sTime','sName','sPhone','sNote'].forEach(id => document.getElementById(id).value = '');
     refresh();
   } else {
-    msg.innerHTML = `<div class="notice bad">${data.error}</div>`;
+    msg.innerHTML = `<div class="notice bad">${esc(data.error)}</div>`;
   }
 });
 

@@ -5,6 +5,13 @@
 const state = { qtySingle:0, qtyDouble:0, date:null, duration:null, time:null, pay:'flatpay', cfg:null, lang:'da' };
 function tr() { return T[state.lang]; }
 
+// Escape anything user- or staff-supplied before it goes into innerHTML,
+// so a name/reason can never inject markup or script (stored XSS).
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
 function applyLang() {
   document.documentElement.lang = state.lang;
   document.querySelectorAll('[data-t]').forEach(el => {
@@ -123,7 +130,7 @@ async function loadSlots() {
   box.innerHTML = `<span class="hint">${tr().loadingTimes}</span>`;
   const data = await (await fetch(`/api/slots?date=${state.date}&durationMinutes=${state.duration}`)).json();
   if (data.closure) {
-    banner.innerHTML = `<div class="closed-banner">🚫 ${tr().closedTitle}<br><strong>${data.closure.reason}</strong><br>${tr().closedSub}</div>`;
+    banner.innerHTML = `<div class="closed-banner">🚫 ${tr().closedTitle}<br><strong>${esc(data.closure.reason)}</strong><br>${tr().closedSub}</div>`;
     box.innerHTML = ''; return;
   }
   const totalQty = state.qtySingle + state.qtyDouble;
@@ -187,7 +194,7 @@ document.getElementById('bookBtn').addEventListener('click', async () => {
   };
   const res = await fetch('/api/bookings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
   const data = await res.json();
-  if (!data.ok) { msg.innerHTML = `<div class="notice bad">${data.error}</div>`; loadSlots(); update(); return; }
+  if (!data.ok) { msg.innerHTML = `<div class="notice bad">${esc(data.error)}</div>`; loadSlots(); update(); return; }
   if (data.payment === 'flatpay') { window.location.href = data.checkoutUrl; }
   else {
     msg.innerHTML = `<div class="notice ok">${tr().okShop(data.total)}</div>`;
