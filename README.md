@@ -3,6 +3,8 @@
 Overbooking-safe rental booking system with group orders, a multilingual UI,
 customer notifications and Google Calendar sync — built in zero-dependency Node.js.
 
+**🔗 Live demo:** <https://blokart-bookingsystem.onrender.com/> — staff view at `/staff.html` (code: `demo`). On a free host the first load can take ~30s while it wakes up.
+
 Both the public booking page and the in-store staff screen talk to the **same
 server**, so they can never disagree on how many carts are free. That single
 source of truth is what prevents double-booking, online or in the shop.
