@@ -1,0 +1,32 @@
+/* Styles specific to the customer booking page (index.html). */
+
+.langbar { display:flex; gap:6px; }
+.langbar button {
+  background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.4);
+  border-radius:6px; padding:4px 9px; font-weight:700; cursor:pointer; font-size:.85rem;
+}
+.langbar button.active { background:#fff; color:var(--sea); }
+
+.phone-row { display:flex; gap:8px; }
+.phone-row select { max-width:130px; }
+
+.qty-card { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  border:1px solid var(--line); border-radius:14px; padding:14px 16px; background:#fff; margin-top:12px; }
+.qty-card h3 { margin:0 0 2px; color:var(--sea); }
+.qty-card .price { color:var(--coral-dark); font-weight:700; }
+.qty-info { display:flex; align-items:center; gap:14px; }
+.qty-icon { display:inline-flex; align-items:center; justify-content:center;
+  width:46px; height:46px; border-radius:12px; background:#e9f4f6; color:var(--sea); flex:0 0 auto; }
+.qty-icon svg { width:26px; height:26px; }
+
+.stepper { display:flex; align-items:center; gap:12px; }
+.stepbtn { width:38px; height:38px; border-radius:50%; border:2px solid var(--sea); background:#fff;
+  color:var(--sea); font-size:1.3rem; font-weight:700; cursor:pointer; line-height:1; }
+.stepbtn:hover:not(:disabled) { background:var(--sea); color:#fff; }
+.stepbtn:disabled { opacity:.35; cursor:not-allowed; }
+.qnum { min-width:26px; text-align:center; font-size:1.2rem; font-weight:700; }
+
+.total-line { margin-top:14px; font-weight:700; color:var(--coral-dark); font-size:1.1rem; }
+
+.hero-art { position:absolute; left:28px; bottom:20px; width:138px; height:auto; opacity:.95; pointer-events:none; z-index:1; }
+@media (max-width:620px){ .hero-art { display:none; } }
